@@ -8,11 +8,11 @@ from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras import layers
 from tensorflow.keras import Model
 
-#config = read_raw('config.cfg')
+config = read_raw('config.cfg')
 
 
-WIDTH = round(400)
-HEIGHT = round(400)
+WIDTH = round(config['trainning'].getint('width'))
+HEIGHT = round(config['trainning'].getint('height'))
 
 IMG_SHAPE = (WIDTH, HEIGHT, 3)
 
@@ -20,11 +20,14 @@ IMG_SHAPE = (WIDTH, HEIGHT, 3)
 #base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
 base_model = InceptionV3(input_shape = IMG_SHAPE,
                                 include_top = False,
-                                weights = None)
+                                weights='imagenet')
 #for layer in base_model.layers:
 #    layer.trainable = False
+#    layer.trainable = False
+
+
 base_model.trainable = False
-# pre_trained_model.summary()
+base_model.summary()
 
 #last_layer = pre_trained_model.get_layer('mixed7')
 #print('last layer output shape: ', last_layer.output_shape)
@@ -34,25 +37,15 @@ last_layer = base_model.get_layer('mixed7')
 print('last layer output shape: ', last_layer.output_shape)
 last_output = last_layer.output
 
-# Flatten the output layer to 1 dimension
-x = layers.Flatten()(last_output)
-# Add a fully connected layer with 1,024 hidden units and ReLU activation
-x = layers.Dense(1024, activation='relu')(x)
-# Add a dropout rate of 0.2
-x = layers.Dropout(0.2)(x)
-# Add a final sigmoid layer for classification
-x = layers.Dense(1, activation='sigmoid')(x)
 
-model = Model(base_model.input, x)
-if not True:
-    global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-    prediction_layer = tf.keras.layers.Dense(1, activation='sigmoid')
-    model = tf.keras.Sequential([
-      base_model,
-      global_average_layer,
-      tf.keras.layers.Dropout(0.2),
-      prediction_layer,
-    ])
+global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+prediction_layer = tf.keras.layers.Dense(1, activation='sigmoid')
+model = tf.keras.Sequential([
+  base_model,
+  global_average_layer,
+  tf.keras.layers.Dropout(0.2),
+  prediction_layer,
+])
 
 #base_dir = '/Users/giuseppemarotta/Documents/raw-data/project-x'
 SOURCEDIR = '/Users/giuseppemarotta/Documents/raw-data/originals/'
@@ -88,7 +81,7 @@ train_datagen = ImageDataGenerator( rescale =1.0/255.,
                                     fill_mode='nearest',
                                     width_shift_range=0.1,
                                     horizontal_flip=True,
-                                    rotation_range=25,
+                                    rotation_range=10,
                                     zoom_range=0.1
                                     )
 
@@ -115,7 +108,7 @@ validation_generator = validation_datagen.flow_from_directory(
 # All images will be rescaled by 1./255
 
 
-checkpoint_path = "uh_training_lr001/cp.ckpt"
+checkpoint_path = "uh_training_MobileNetV2/cp.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 print(checkpoint_dir)
 # Create a callback that saves the model's weights
@@ -129,7 +122,7 @@ latest = tf.train.latest_checkpoint(checkpoint_dir)
 if latest:
     model.load_weights(latest)
 model.compile(loss='binary_crossentropy',
-              optimizer=RMSprop(lr=0.0001),
+              optimizer=RMSprop(lr=0.001),
               #optimizer=SGD(lr=0.1, momentum=0.9),
               metrics=['acc'])
 print('Print in ' + str(STEP_SIZE_TRAIN))
