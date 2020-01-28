@@ -8,8 +8,8 @@ from tensorflow.keras.optimizers import SGD
 #config = read_raw('config.cfg')
 
 
-WIDTH = round(100)
-HEIGHT = round(100)
+WIDTH = round(400)
+HEIGHT = round(400)
 
 IMG_SHAPE = (WIDTH, HEIGHT, 3)
 
@@ -24,7 +24,8 @@ prediction_layer = tf.keras.layers.Dense(1,activation='sigmoid')
 model = tf.keras.Sequential([
   base_model,
   global_average_layer,
-  prediction_layer
+  tf.keras.layers.Dropout(0.2),
+  prediction_layer,
 ])
 
 #base_dir = '/Users/giuseppemarotta/Documents/raw-data/project-x'
@@ -57,19 +58,18 @@ validation_dir = SOURCEDIR + "tmp/unhappen-v-happen/testing/"
 # Directory with our training dog pictures
 #validation_invalid_rides_dir = os.path.join(validation_dir, 'invalid')
 
-train_datagen = ImageDataGenerator( rescale = 1.0/255.,
+train_datagen = ImageDataGenerator( rescale =1.0/255.,
                                     fill_mode='nearest',
-                                    width_shift_range=0.3,
+                                    width_shift_range=0.1,
                                     horizontal_flip=True,
-                                    rotation_range=40,
-                                    shear_range=0.2
+                                    rotation_range=25,
+                                    zoom_range=0.1
                                     )
 
 # Flow training images in batches of 128 using train_datagen generator
 train_generator = train_datagen.flow_from_directory(
         train_dir,  # This is the source directory for training images
         target_size=(WIDTH, HEIGHT),  # All images will be resized to 150x150
-        batch_size=16,
         color_mode='rgb',
         class_mode='binary',
         shuffle=True,
@@ -89,7 +89,7 @@ validation_generator = validation_datagen.flow_from_directory(
 # All images will be rescaled by 1./255
 
 
-checkpoint_path = "uh_training_sdg/cp.ckpt"
+checkpoint_path = "uh_training_lr001/cp.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 print(checkpoint_dir)
 # Create a callback that saves the model's weights
@@ -103,17 +103,16 @@ latest = tf.train.latest_checkpoint(checkpoint_dir)
 if latest:
     model.load_weights(latest)
 model.compile(loss='binary_crossentropy',
-              #optimizer=RMSprop(lr=0.001),
-              optimizer=SGD(lr=0.1, momentum=0.9),
+              optimizer=RMSprop(lr=0.001),
+              #optimizer=SGD(lr=0.1, momentum=0.9),
               metrics=['acc'])
 print('Print in ' + str(STEP_SIZE_TRAIN))
 model.summary()
 print('Number of Steps =' +str(STEP_SIZE_TRAIN))
 history = model.fit_generator(
       train_generator,
-      steps_per_epoch=STEP_SIZE_TRAIN,
       validation_data=validation_generator,
-      epochs=2,
+      epochs=6,
       verbose=1,
       callbacks=[cp_callback]
 )
