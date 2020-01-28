@@ -4,6 +4,9 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from utils import read_raw, plot_history
 import os
 from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.applications.inception_v3 import InceptionV3
+from tensorflow.keras import layers
+from tensorflow.keras import Model
 
 #config = read_raw('config.cfg')
 
@@ -14,19 +17,42 @@ HEIGHT = round(400)
 IMG_SHAPE = (WIDTH, HEIGHT, 3)
 
 # Create the base model from the pre-trained model MobileNet V2
-base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
-                                               include_top=False,
-                                               weights='imagenet')
+#base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+base_model = InceptionV3(input_shape = IMG_SHAPE,
+                                include_top = False,
+                                weights = None)
+#for layer in base_model.layers:
+#    layer.trainable = False
 base_model.trainable = False
-global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-prediction_layer = tf.keras.layers.Dense(1,activation='sigmoid')
+# pre_trained_model.summary()
 
-model = tf.keras.Sequential([
-  base_model,
-  global_average_layer,
-  tf.keras.layers.Dropout(0.2),
-  prediction_layer,
-])
+#last_layer = pre_trained_model.get_layer('mixed7')
+#print('last layer output shape: ', last_layer.output_shape)
+#last_output = last_layer.output
+
+last_layer = base_model.get_layer('mixed7')
+print('last layer output shape: ', last_layer.output_shape)
+last_output = last_layer.output
+
+# Flatten the output layer to 1 dimension
+x = layers.Flatten()(last_output)
+# Add a fully connected layer with 1,024 hidden units and ReLU activation
+x = layers.Dense(1024, activation='relu')(x)
+# Add a dropout rate of 0.2
+x = layers.Dropout(0.2)(x)
+# Add a final sigmoid layer for classification
+x = layers.Dense(1, activation='sigmoid')(x)
+
+model = Model(base_model.input, x)
+if not True:
+    global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+    prediction_layer = tf.keras.layers.Dense(1, activation='sigmoid')
+    model = tf.keras.Sequential([
+      base_model,
+      global_average_layer,
+      tf.keras.layers.Dropout(0.2),
+      prediction_layer,
+    ])
 
 #base_dir = '/Users/giuseppemarotta/Documents/raw-data/project-x'
 SOURCEDIR = '/Users/giuseppemarotta/Documents/raw-data/originals/'
@@ -103,7 +129,7 @@ latest = tf.train.latest_checkpoint(checkpoint_dir)
 if latest:
     model.load_weights(latest)
 model.compile(loss='binary_crossentropy',
-              optimizer=RMSprop(lr=0.001),
+              optimizer=RMSprop(lr=0.0001),
               #optimizer=SGD(lr=0.1, momentum=0.9),
               metrics=['acc'])
 print('Print in ' + str(STEP_SIZE_TRAIN))
