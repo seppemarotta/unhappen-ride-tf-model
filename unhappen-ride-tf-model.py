@@ -7,6 +7,7 @@ from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras import layers
 from tensorflow.keras import Model
+from pathlib import Path
 
 config = read_raw('config.cfg')
 
@@ -48,18 +49,16 @@ model = tf.keras.Sequential([
 ])
 
 #base_dir = '/Users/giuseppemarotta/Documents/raw-data/project-x'
-SOURCEDIR = '/Users/giuseppemarotta/Documents/raw-data/originals/'
+SOURCEDIR = Path()
 
-UNHAPPEN_SOURCE_DIR = SOURCEDIR+"unhappen-rides/"
-TRAINING_UNHAPPEN_DIR = SOURCEDIR+"tmp/unhappen-v-happen/training/unhappen/"
-TESTING_UNHAPPEN_DIR = SOURCEDIR+"tmp/unhappen-v-happen/testing/unhappen/"
-HAPPEN_SOURCE_DIR = SOURCEDIR+"valid-rides/"
-TRAINING_HAPPEN_DIR = SOURCEDIR+"tmp/unhappen-v-happen/training/happen/"
-TESTING_HAPPEN_DIR = SOURCEDIR+"tmp/unhappen-v-happen/testing/happen/"
+TRAINING_UNHAPPEN_DIR = "tmp/unhappen-v-happen/training/unhappen/"
+TESTING_UNHAPPEN_DIR = "tmp/unhappen-v-happen/testing/unhappen/"
+TRAINING_HAPPEN_DIR = "tmp/unhappen-v-happen/training/happen/"
+TESTING_HAPPEN_DIR = "tmp/unhappen-v-happen/testing/happen/"
 
 #train_dir = os.path.join(base_dir, 'train')
-train_dir = SOURCEDIR + "tmp/unhappen-v-happen/training/"
-validation_dir = SOURCEDIR + "tmp/unhappen-v-happen/testing/"
+train_dir = "tmp/unhappen-v-happen/training/"
+validation_dir = "tmp/unhappen-v-happen/testing/"
 
 
 
@@ -78,11 +77,12 @@ validation_dir = SOURCEDIR + "tmp/unhappen-v-happen/testing/"
 #validation_invalid_rides_dir = os.path.join(validation_dir, 'invalid')
 
 train_datagen = ImageDataGenerator( rescale =1.0/255.,
-                                    fill_mode='nearest',
-                                    width_shift_range=0.1,
+                                    fill_mode='constant',
+                                    width_shift_range=0.2,
                                     horizontal_flip=True,
-                                    rotation_range=10,
-                                    zoom_range=0.1
+                                    vertical_flip=True,
+                                    rotation_range=15,
+                                    cval=255
                                     )
 
 # Flow training images in batches of 128 using train_datagen generator
@@ -122,7 +122,7 @@ latest = tf.train.latest_checkpoint(checkpoint_dir)
 if latest:
     model.load_weights(latest)
 model.compile(loss='binary_crossentropy',
-              optimizer=RMSprop(lr=0.001),
+              optimizer=RMSprop(lr=0.0001),
               #optimizer=SGD(lr=0.1, momentum=0.9),
               metrics=['acc'])
 print('Print in ' + str(STEP_SIZE_TRAIN))
@@ -131,7 +131,7 @@ print('Number of Steps =' +str(STEP_SIZE_TRAIN))
 history = model.fit_generator(
       train_generator,
       validation_data=validation_generator,
-      epochs=6,
+      epochs=4,
       verbose=1,
       callbacks=[cp_callback]
 )
