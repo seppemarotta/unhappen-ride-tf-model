@@ -18,25 +18,23 @@ HEIGHT = round(config['trainning'].getint('height'))
 IMG_SHAPE = (WIDTH, HEIGHT, 3)
 
 # Create the base model from the pre-trained model MobileNet V2
-#base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
-base_model = InceptionV3(input_shape = IMG_SHAPE,
+base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+#base_model = InceptionV3(input_shape = IMG_SHAPE,
                                 include_top = False,
                                 weights='imagenet')
 #for layer in base_model.layers:
 #    layer.trainable = False
 #    layer.trainable = False
 
-
-base_model.trainable = False
 base_model.summary()
-
+base_model.trainable=False
 #last_layer = pre_trained_model.get_layer('mixed7')
 #print('last layer output shape: ', last_layer.output_shape)
 #last_output = last_layer.output
 
-last_layer = base_model.get_layer('mixed7')
-print('last layer output shape: ', last_layer.output_shape)
-last_output = last_layer.output
+#last_layer = base_model.get_layer('mixed7')
+#print('last layer output shape: ', last_layer.output_shape)
+#last_output = last_layer.output
 
 
 global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
@@ -79,9 +77,7 @@ validation_dir = "tmp/unhappen-v-happen/testing/"
 train_datagen = ImageDataGenerator( rescale =1.0/255.,
                                     fill_mode='constant',
                                     width_shift_range=0.2,
-                                    horizontal_flip=True,
-                                    vertical_flip=True,
-                                    rotation_range=15,
+                                    zoom_range=0.1,
                                     cval=255
                                     )
 
@@ -108,7 +104,7 @@ validation_generator = validation_datagen.flow_from_directory(
 # All images will be rescaled by 1./255
 
 
-checkpoint_path = "uh_training_MobileNetV2/cp.ckpt"
+checkpoint_path = "uh_training_retrain/cp.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 print(checkpoint_dir)
 # Create a callback that saves the model's weights
@@ -122,7 +118,7 @@ latest = tf.train.latest_checkpoint(checkpoint_dir)
 if latest:
     model.load_weights(latest)
 model.compile(loss='binary_crossentropy',
-              optimizer=RMSprop(lr=0.0001),
+              optimizer=RMSprop(lr=0.001),
               #optimizer=SGD(lr=0.1, momentum=0.9),
               metrics=['acc'])
 print('Print in ' + str(STEP_SIZE_TRAIN))
@@ -131,9 +127,10 @@ print('Number of Steps =' +str(STEP_SIZE_TRAIN))
 history = model.fit_generator(
       train_generator,
       validation_data=validation_generator,
-      epochs=4,
+      epochs=5,
       verbose=1,
-      callbacks=[cp_callback]
+      callbacks=[cp_callback],
+      use_multiprocessing=False
 )
 
 plot_history(history)
